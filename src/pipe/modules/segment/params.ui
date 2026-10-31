@@ -1,2 +1,4 @@
 channel:combo:people:sky:vegetation:water:mountain:ground:building:subject:artificial ground:clothing
 invert:combo:off:on
+hard:combo:off:on
+shrink:slider:0:0.02

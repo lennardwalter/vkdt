@@ -8,6 +8,8 @@ layout(std140, set = 0, binding = 1) uniform params_t
 {
   int channel;
   int invert;
+  int hard;
+  float shrink;
 } params;
 layout(push_constant, std140) uniform push_t { ivec2 net; int ch; } push;
 layout(std430, set = 1, binding = 0) readonly buffer buf_t { float16_t v[]; } buf;
@@ -20,17 +22,33 @@ float mask(ivec2 p)
   return 1.0/(1.0 + exp(-float(buf.v[push.ch * (push.net.x * p.y + p.x) + c])));
 }
 
-void main()
+float mask(vec2 u)
 {
-  ivec2 ipos = ivec2(gl_GlobalInvocationID);
-  if(any(greaterThanEqual(ipos, imageSize(img_out)))) return;
-
-  const vec2 pos = (ipos + 0.5) * vec2(push.net) / vec2(imageSize(img_out)) - 0.5;
+  const vec2 pos = u * vec2(push.net) - 0.5;
   const ivec2 p0 = ivec2(floor(pos));
   const vec2 f = pos - p0;
   float m = mix(
       mix(mask(p0),              mask(p0 + ivec2(1, 0)), f.x),
       mix(mask(p0 + ivec2(0, 1)), mask(p0 + ivec2(1, 1)), f.x), f.y);
-  if(params.invert != 0) m = 1.0 - m;
+  return params.invert != 0 ? 1.0 - m : m;
+}
+
+void main()
+{
+  ivec2 ipos = ivec2(gl_GlobalInvocationID);
+  if(any(greaterThanEqual(ipos, imageSize(img_out)))) return;
+
+  const vec2 u = (ipos + 0.5) / vec2(imageSize(img_out));
+  float m = mask(u);
+  if(params.hard != 0)
+  { // threshold and erode: the mask varies slowly on the logits grid, two rings of samples are enough
+    const vec2 r = params.shrink * vec2(1.0, imageSize(img_out).x / float(imageSize(img_out).y));
+    for(int i=0;i<16 && m > 0.5;i++)
+    {
+      const float phi = M_PI*(2*i + i/8)/8.0;
+      m = min(m, mask(u + (i < 8 ? 0.5 : 1.0) * r * vec2(cos(phi), sin(phi))));
+    }
+    m = m > 0.5 ? 1.0 : 0.0;
+  }
   imageStore(img_out, ipos, vec4(m));
 }
