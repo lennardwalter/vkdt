@@ -4,6 +4,9 @@ layout(std140, set = 0, binding = 1) uniform params_t
   vec4  box;        // x0 y0 x1 y1, empty if x1 <= x0
   uvec4 draw[2048]; // vertex count, then brush vertices as written by the draw widget
   float radius;     // brush radius relative to the image width
+  int   zoom;
+  int   hard;       // threshold and shrink the mask
+  float shrink;     // erosion radius relative to the image width
 } params;
 
 float clk(int i) { return params.click[i/4][i%4]; }

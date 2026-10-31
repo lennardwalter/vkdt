@@ -30,14 +30,9 @@ float mask(int z, vec2 u, vec4 r)
       mix(mask(z, p0 + ivec2(0, 1)), mask(z, p0 + ivec2(1, 1)), f.x), f.y);
 }
 
-void main()
+// soft mask at image position u, first run on the region in c[1], zoomed in run on c[0]
+float mask(vec2 u)
 {
-  ivec2 ipos = ivec2(gl_GlobalInvocationID);
-  if(any(greaterThanEqual(ipos, imageSize(img_out)))) return;
-  if(clk(0) < 1.0 && !has_box() && !has_draw()) { imageStore(img_out, ipos, vec4(0.0)); return; }
-
-  // first run on the region in c[1], zoomed in run on c[0]
-  const vec2 u = (ipos + 0.5) / vec2(imageSize(img_out));
   const vec4 r0 = reg.c[1], r1 = reg.c[0];
   float m = mask(0, u, r0);
   if(reg.c[2].x > 0.0 && all(greaterThan(u, r1.xy)) && all(lessThan(u, r1.zw)))
@@ -47,6 +42,27 @@ void main()
     const float w = smoothstep(0.0, 0.1, min(min(d.x, d.y), min(d.z, d.w)))
       * clamp(5.0*(1.0 - abs(2.0*m - 1.0)), 0.0, 1.0);
     m = mix(m, mask(1, u, r1), w);
+  }
+  return m;
+}
+
+void main()
+{
+  ivec2 ipos = ivec2(gl_GlobalInvocationID);
+  if(any(greaterThanEqual(ipos, imageSize(img_out)))) return;
+  if(clk(0) < 1.0 && !has_box() && !has_draw()) { imageStore(img_out, ipos, vec4(0.0)); return; }
+
+  const vec2 u = (ipos + 0.5) / vec2(imageSize(img_out));
+  float m = mask(u);
+  if(params.hard != 0)
+  { // threshold and erode: the mask varies slowly on the logits grid, two rings of samples are enough
+    const vec2 r = params.shrink * vec2(1.0, imageSize(img_out).x / float(imageSize(img_out).y));
+    for(int i=0;i<16 && m > 0.5;i++)
+    {
+      const float phi = M_PI*(2*i + i/8)/8.0;
+      m = min(m, mask(u + (i < 8 ? 0.5 : 1.0) * r * vec2(cos(phi), sin(phi))));
+    }
+    m = m > 0.5 ? 1.0 : 0.0;
   }
   imageStore(img_out, ipos, vec4(m));
 }
