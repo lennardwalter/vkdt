@@ -17,6 +17,9 @@ you can [download the weights package here](https://codeberg.org/hanatos/vkdt-nn
 
 * `channel` what the mask selects
 * `invert` select everything else
+* `hard` output a hard mask, shrunk to sit inside the selection, for a guided
+  filter to grow back to the edges in the image
+* `shrink` how far to shrink the hard mask, relative to the image width
 
 ## connectors
 

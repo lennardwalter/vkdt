@@ -14,8 +14,10 @@ connect:guided:sky:output:blend:sky:mask
 connect:blend:sky:output:filmcurv:01:input
 param:segment:sky:channel:1
 param:segment:sky:invert:0
-param:guided:sky:radius:0.01
-param:guided:sky:epsilon:0.01
+param:segment:sky:hard:1
+param:segment:sky:shrink:0.002
+param:guided:sky:radius:0.008
+param:guided:sky:epsilon:0.001
 param:exposure:sky:exposure:-1
 param:blend:sky:opacity:1
 param:blend:sky:taathrs:0
